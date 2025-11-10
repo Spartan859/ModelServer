@@ -1,0 +1,13 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from robot_state/msg/EEFTraj.msg
+// generated code does not contain a copyright notice
+
+#include "robot_state/msg/EEFState.idl"
+
+module robot_state {
+  module msg {
+    struct EEFTraj {
+      sequence<robot_state::msg::EEFState> traj;
+    };
+  };
+};

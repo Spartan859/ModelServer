@@ -1,0 +1,23 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from robot_state/msg/PoseMultiStamped.msg
+// generated code does not contain a copyright notice
+
+
+module robot_state {
+  module msg {
+    typedef double double__7[7];
+    struct PoseMultiStamped {
+      uint32 tick;
+
+      double system_time;
+
+      double ros_time;
+
+      double source_time;
+
+      @verbatim (language="comment", text=
+        " x, y, z, qx, qy, qz, qw")
+      double__7 pose;
+    };
+  };
+};

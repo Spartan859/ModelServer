@@ -42,8 +42,8 @@ class JointTrack:
         self.__joint_state_sub
 
         ### variable
-        self.__delta_lr_max = 0.10
-        self.__delta_dm_max = 0.05
+        self.__delta_lr_max = 0.10 * 1
+        self.__delta_dm_max = 0.05 * 4
         # target
         self.__target_change_thresh = 0.2
         # deadzone - for each joint

@@ -3,10 +3,13 @@ from unitree_sdk2py.core.channel import (
     ChannelPublisher,
     ChannelSubscriber,
 )
+from unitree_sdk2py.idl.nav_msgs.msg.dds_ import Odometry_
+from unitree_sdk2py.idl.geometry_msgs.msg.dds_ import PoseStamped_
 from unitree_sdk2py.idl.sensor_msgs.msg.dds_ import (
     PointCloud2_,
 )
 from unitree_sdk2py.idl.unitree_go.msg.dds_ import (
+    WirelessController_,
     PathPoint_,
     SportModeState_,
     LowState_,
@@ -31,11 +34,42 @@ import cv2
 import time
 
 
-def get_robot_information(robot_state, point_cloud, low_state, 
+def get_robot_information(odom, pose, robot_state, point_cloud, low_state, 
                           ip_address, camera_queue: Queue, command_queue: Queue):
     '''
     use the interface of unitree to subscribe the robot information topic
     '''
+    def _handle_odom(msg: Odometry_):
+        '''
+        Handle the odometry message
+        '''
+        try:
+            # Always try to put the latest message, replacing old one if queue is full
+            if odom.full():
+                try:
+                    odom.get_nowait()  # Remove old message
+                except:
+                    pass
+            odom.put(msg, block=False)  # Put new message
+        except:
+            pass
+
+    def _handle_pose(msg: PoseStamped_):
+        '''
+        Handle the pose message
+        pose: [x, y, z, roll, pitch, yaw]
+        '''
+        try:
+            # Always try to put the latest message, replacing old one if queue is full
+            if pose.full():
+                try:
+                    pose.get_nowait()  # Remove old message
+                except:
+                    pass
+            pose.put(msg, block=False)  # Put new message
+        except:
+            pass
+
     def _handle_robot_state(msg: SportModeState_):
         try:
             if robot_state.full():
@@ -114,6 +148,12 @@ def get_robot_information(robot_state, point_cloud, low_state,
 
     pc_buffer = deque(maxlen=10)
 
+    odom_subscriber = ChannelSubscriber("rt/utlidar/robot_odom", Odometry_)
+    odom_subscriber.Init(_handle_odom)
+
+    pose_subscriber = ChannelSubscriber("rt/utlidar/robot_pose", PoseStamped_)
+    pose_subscriber.Init(_handle_pose)
+
     sport_state_subscriber = ChannelSubscriber("rt/sportmodestate", SportModeState_)
     sport_state_subscriber.Init(_handle_robot_state, 0)
 
@@ -132,6 +172,8 @@ def get_robot_information(robot_state, point_cloud, low_state,
                 command = command_queue.get_nowait()
                 if command[0] == 'Move':
                     sport_client.Move(command[1], command[2], command[3])
+                elif command[0] == 'ClassicWalk':
+                    sport_client.ClassicWalk(True)
                 elif command[0] == 'BalanceStand':
                     sport_client.BalanceStand()
                 elif command[0] == 'RecoveryStand':
@@ -188,6 +230,8 @@ class GO2Interface:
         self.camera_queue = Queue(maxsize=1)
         self.command_queue = Queue(maxsize=100)
 
+        self.odom = Queue(maxsize=1)
+        self.pose = Queue(maxsize=1)
         self.robot_state = Queue(maxsize=1)
         self.point_cloud = Queue(maxsize=1)
         self.low_state   = Queue(maxsize=1)
@@ -196,6 +240,11 @@ class GO2Interface:
         self.InitLowCmd()
         self.crc = CRC()
 
+        print("Pre subscribe process")
+        # Start the subscription process
+        self.subscribe_process()
+        print("Post subscribe process")
+        
         self.start()
 
     def InitLowCmd(self):
@@ -215,6 +264,8 @@ class GO2Interface:
         p = Process(
             target=get_robot_information,
             args=(
+                self.odom,
+                self.pose,
                 self.robot_state, self.point_cloud, self.low_state, 
                 self.ip_address, self.camera_queue, self.command_queue,
             )
@@ -232,7 +283,7 @@ class GO2Interface:
     def start(self, _index=0):
         # enter the state of balance
         if _index == 0:
-            self.command_queue.put(('BalanceStand',))
+            self.command_queue.put(('ClassicWalk',))
             print('robot has started')
             # print("WARNING: Please ensure there are no obstacles around the robot while running this example.")
             # input("Press Enter to continue...")
@@ -242,7 +293,7 @@ class GO2Interface:
 
     def stop(self):
         self.command_queue.put(('StopMove',))
-        self.command_queue.put(('BalanceStand',))
+        self.command_queue.put(('ClassicWalk',))
         self.command_queue.put(('StandDown',))
         print('robot has stopped')
 
@@ -339,6 +390,20 @@ class GO2Interface:
 
         self.low_cmd.crc = self.crc.Crc(self.low_cmd)
         self.command_queue.put(('LowCommand_Write', self.low_cmd))
+
+    def get_odom(self):
+        try:
+            odom = self.odom.get(timeout=1.0)
+            return odom
+        except Exception as e:
+            return None
+            
+    def get_pose(self):
+        try:
+            pose = self.pose.get(timeout=1.0)
+            return pose
+        except Exception as e:
+            return None
 
     def get_lowstate(self):
         try:

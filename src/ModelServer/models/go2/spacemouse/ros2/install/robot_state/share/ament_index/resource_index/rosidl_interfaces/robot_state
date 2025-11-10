@@ -1,0 +1,6 @@
+msg/EEFState.idl
+msg/EEFState.msg
+msg/EEFTraj.idl
+msg/EEFTraj.msg
+msg/PoseMultiStamped.idl
+msg/PoseMultiStamped.msg

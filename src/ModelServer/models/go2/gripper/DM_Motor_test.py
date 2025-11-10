@@ -11,28 +11,28 @@ MotorControl1=MotorControl(serial_device)
 MotorControl1.addMotor(Motor1)
 MotorControl1.addMotor(Motor2)
 
-if MotorControl1.switchControlMode(Motor1,Control_Type.POS_VEL):
-    print("switch POS_VEL success")
+# if MotorControl1.switchControlMode(Motor1,Control_Type.POS_VEL):
+#     print("switch POS_VEL success")
 if MotorControl1.switchControlMode(Motor2,Control_Type.VEL):
     print("switch VEL success")
-print("sub_ver:",MotorControl1.read_motor_param(Motor1,DM_variable.sub_ver))
-print("Gr:",MotorControl1.read_motor_param(Motor1,DM_variable.Gr))
+# print("sub_ver:",MotorControl1.read_motor_param(Motor1,DM_variable.sub_ver))
+# print("Gr:",MotorControl1.read_motor_param(Motor1,DM_variable.Gr))
 
 # if MotorControl1.change_motor_param(Motor1,DM_variable.KP_APR,54):
 #     print("write success")
-print("PMAX:",MotorControl1.read_motor_param(Motor1,DM_variable.PMAX))
-print("MST_ID:",MotorControl1.read_motor_param(Motor1,DM_variable.MST_ID))
-print("VMAX:",MotorControl1.read_motor_param(Motor1,DM_variable.VMAX))
-print("TMAX:",MotorControl1.read_motor_param(Motor1,DM_variable.TMAX))
+# print("PMAX:",MotorControl1.read_motor_param(Motor1,DM_variable.PMAX))
+# print("MST_ID:",MotorControl1.read_motor_param(Motor1,DM_variable.MST_ID))
+# print("VMAX:",MotorControl1.read_motor_param(Motor1,DM_variable.VMAX))
+# print("TMAX:",MotorControl1.read_motor_param(Motor1,DM_variable.TMAX))
 print("Motor2:")
 print("PMAX:",MotorControl1.read_motor_param(Motor2,DM_variable.PMAX))
 print("MST_ID:",MotorControl1.read_motor_param(Motor2,DM_variable.MST_ID))
 print("VMAX:",MotorControl1.read_motor_param(Motor2,DM_variable.VMAX))
 print("TMAX:",MotorControl1.read_motor_param(Motor2,DM_variable.TMAX))
 # MotorControl1.enable(Motor3)
-MotorControl1.save_motor_param(Motor1)
+# MotorControl1.save_motor_param(Motor1)
 MotorControl1.save_motor_param(Motor2)
-MotorControl1.enable(Motor1)
+# MotorControl1.enable(Motor1)
 MotorControl1.enable(Motor2)
 i=0
 while i<10000:
@@ -40,7 +40,7 @@ while i<10000:
     i=i+1
     # MotorControl1.control_pos_force(Motor1, 10, 1000,100)
     # MotorControl1.control_Vel(Motor1, q*5)
-    MotorControl1.control_Pos_Vel(Motor1,q*8,30)
+    # MotorControl1.control_Pos_Vel(Motor1,q*8,30)
     # print("Motor1:","POS:",Motor1.getPosition(),"VEL:",Motor1.getVelocity(),"TORQUE:",Motor1.getTorque())
     # MotorControl1.controlMIT(Motor2, 35, 0.1, 8*q, 0, 0)
 
