@@ -310,17 +310,20 @@ class GO2Interface:
         """Resize image to target resolution
         
         Args:
-            image: numpy array of image
-            target_resolution: tuple (width, height) or None for original
+            image: numpy array of image (width, height, channels) after transpose
+            target_resolution: tuple (width, height) - desired output resolution
             
         Returns:
-            Resized image or original if target_resolution is None
+            Resized image with shape (width, height, channels)
         """
         if target_resolution is None:
             return image
         
         target_width, target_height = target_resolution
-        resized = cv2.resize(image, (target_width, target_height), interpolation=cv2.INTER_LINEAR)
+        # Our image is (width, height, channels) after transpose
+        # cv2.resize with dsize=(width, height) returns (height, width, channels)
+        # But we want (width, height, channels), so we need to swap the dimensions
+        resized = cv2.resize(image, (target_height, target_width), interpolation=cv2.INTER_LINEAR)
         return resized
 
     def InitLowCmd(self):
