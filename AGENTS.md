@@ -119,6 +119,13 @@ class Go2:
   - `num_frames`: int - 获取帧数（默认1）
 - **返回值**: 相机帧数据
 
+#### `get_camera_image(resolution=None)`
+获取机器人机载相机图像（使用缓存机制以降低延迟）
+- **参数**:
+  - `resolution`: tuple 或 None - 目标分辨率 (width, height)，None表示原始分辨率
+- **返回值**: numpy.ndarray 或 None - 指定分辨率的RGB图像数据或 None（如果获取失败）
+- **说明**: 该方法使用后台缓存机制，延迟通常低于100ms，支持动态调整图像分辨率以适应网络传输需求
+
 ### 机械臂控制
 
 #### `get_arm()`
@@ -258,6 +265,13 @@ robot.stand()
 imu_data = robot.get_imu()
 pose = robot.get_pose()
 
+# 获取相机图像（原始分辨率）
+camera_image = robot.get_camera_image()
+
+# 获取相机图像（指定分辨率，用于网络传输）
+low_res_image = robot.get_camera_image(resolution=(320, 240))
+high_res_image = robot.get_camera_image(resolution=(1280, 720))
+
 # 控制机械臂
 robot.set_arm([0.0, -1.0, 2.0, 0.0, 0.0, 0.0])
 
@@ -375,9 +389,12 @@ class GO2Interface:
 
 ### 相机控制方法
 
-#### `get_camera_image()`
-获取机器人相机图像
-- **返回值**: numpy.ndarray - RGB图像数据或 None（如果获取失败）
+#### `get_camera_image(resolution=None)`
+获取机器人相机图像（使用缓存机制以降低延迟）
+- **参数**:
+  - `resolution`: tuple 或 None - 目标分辨率 (width, height)，None表示原始分辨率
+- **返回值**: numpy.ndarray - 指定分辨率的RGB图像数据或 None（如果获取失败）
+- **说明**: 该方法使用后台线程持续获取图像并缓存最新帧，显著降低获取延迟，支持动态分辨率调整
 
 ### 底层命令初始化
 

@@ -90,20 +90,16 @@ class Go2:
     def get_gopro_frame(self, num_frames=1):
         return self.gopro10.read_frame(num_frames)
 
-    def get_camera_image(self):
-        """Get image from the robot's onboard camera (wrapper of GO2Interface.get_camera_image).
+    def get_camera_image(self, resolution=None):
+        """Get image from the robot's onboard camera (cached for low latency).
 
+        Args:
+            resolution: tuple (width, height) or None for original resolution
+            
         Returns:
-            numpy.ndarray or None: RGB image (numpy array) if available, otherwise None.
+            numpy.ndarray or None: RGB image with specified resolution, or None if unavailable.
         """
-        try:
-            # GO2Interface.get_camera_image already handles queue/timeouts and returns None on failure
-            img = self.robot.get_camera_image()
-            return img
-        except Exception as e:
-            # Don't crash the caller; log briefly and return None
-            print(f"get_camera_image error: {e}")
-            return None
+        return self.robot.get_camera_image(resolution)
     
     def get_pc(self):
         pc = self.robot.get_pointcloud() 
