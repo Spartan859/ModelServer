@@ -236,10 +236,6 @@ class GO2Interface:
         self.point_cloud = Queue(maxsize=1)
         self.low_state   = Queue(maxsize=1)
 
-        # Camera image cache - support multiple resolutions
-        self.camera_cache = {}  # {resolution: {'image': img, 'timestamp': ts}}
-        self.camera_cache_timeout = 0.1  # Cache timeout in seconds
-
         self.low_cmd = unitree_go_msg_dds__LowCmd_()
         self.InitLowCmd()
         self.crc = CRC()
@@ -250,81 +246,6 @@ class GO2Interface:
         print("Post subscribe process")
         
         self.start()
-
-        # Start camera streaming thread
-        self._start_camera_streaming()
-
-    def _start_camera_streaming(self):
-        """Start a background thread to continuously fetch camera images"""
-        import threading
-        
-        def camera_stream_worker():
-            while True:
-                try:
-                    # Request new image sample
-                    self.command_queue.put(('GetImageSample',))
-                    
-                    # Try to get the image with shorter timeout
-                    try:
-                        (code, data) = self.camera_queue.get(timeout=0.5)
-                        if code == 0 and data is not None:
-                            image_data = np.frombuffer(bytes(data), dtype=np.uint8)
-                            image = cv2.imdecode(image_data, cv2.IMREAD_COLOR)
-                            if image is not None:
-                                image = image[:,:,[2,1,0]]  # BGR to RGB
-                                image = cv2.transpose(image)
-                                # Cache the original resolution image
-                                current_time = time.time()
-                                self.camera_cache['original'] = {
-                                    'image': image,
-                                    'timestamp': current_time
-                                }
-                                # Clean old cache entries
-                                self._clean_old_cache_entries(current_time)
-                    except Empty:
-                        pass
-                    
-                    # Small delay to prevent overwhelming the queue
-                    time.sleep(0.05)  # ~20 FPS
-                    
-                except Exception as e:
-                    print(f"Camera streaming error: {e}")
-                    time.sleep(0.1)
-
-        # Start the streaming thread
-        self.camera_thread = threading.Thread(target=camera_stream_worker, daemon=True)
-        self.camera_thread.start()
-        print("Camera streaming thread started")
-
-    def _clean_old_cache_entries(self, current_time):
-        """Clean old cache entries that are beyond timeout"""
-        keys_to_remove = []
-        for resolution, data in self.camera_cache.items():
-            if current_time - data['timestamp'] > self.camera_cache_timeout:
-                keys_to_remove.append(resolution)
-        
-        for key in keys_to_remove:
-            del self.camera_cache[key]
-
-    def _resize_image(self, image, target_resolution):
-        """Resize image to target resolution
-        
-        Args:
-            image: numpy array of image (width, height, channels) after transpose
-            target_resolution: tuple (width, height) - desired output resolution
-            
-        Returns:
-            Resized image with shape (width, height, channels)
-        """
-        if target_resolution is None:
-            return image
-        
-        target_width, target_height = target_resolution
-        # Our image is (width, height, channels) after transpose
-        # cv2.resize with dsize=(width, height) returns (height, width, channels)
-        # But we want (width, height, channels), so we need to swap the dimensions
-        resized = cv2.resize(image, (target_height, target_width), interpolation=cv2.INTER_LINEAR)
-        return resized
 
     def InitLowCmd(self):
         self.low_cmd.head[0] = 0xFE
@@ -376,65 +297,23 @@ class GO2Interface:
         self.command_queue.put(('StandDown',))
         print('robot has stopped')
 
-    def get_camera_image(self, resolution=None):
-        """Get camera image with specified resolution
-        
-        Args:
-            resolution: tuple (width, height) or None for original resolution
-            
-        Returns:
-            numpy.ndarray or None: RGB image with specified resolution, or None if no recent image available
-        """
-        current_time = time.time()
-        cache_key = f"{resolution[0]}x{resolution[1]}" if resolution else "original"
-        
-        # Check if we have a cached image for this resolution
-        if cache_key in self.camera_cache:
-            cache_data = self.camera_cache[cache_key]
-            if current_time - cache_data['timestamp'] < self.camera_cache_timeout:
-                return cache_data['image'].copy()
-        
-        # Get original image from cache or fetch new one
-        original_image = None
-        if 'original' in self.camera_cache:
-            orig_data = self.camera_cache['original']
-            if current_time - orig_data['timestamp'] < self.camera_cache_timeout:
-                original_image = orig_data['image']
-        
-        # If no original image, try to get one immediately (fallback)
-        if original_image is None:
-            try:
-                self.command_queue.put(('GetImageSample',))
-                (code, data) = self.camera_queue.get(timeout=0.1)
-                if code == 0 and data is not None:
-                    image_data = np.frombuffer(bytes(data), dtype=np.uint8)
-                    image = cv2.imdecode(image_data, cv2.IMREAD_COLOR)
-                    if image is not None:
-                        image = image[:,:,[2,1,0]]
-                        image = cv2.transpose(image)
-                        original_image = image
-                        # Cache the original
-                        self.camera_cache['original'] = {
-                            'image': image,
-                            'timestamp': current_time
-                        }
-            except (Empty, Exception):
-                pass
-        
-        if original_image is None:
-            return None
-        
-        # Resize if needed
-        if resolution is not None:
-            resized_image = self._resize_image(original_image, resolution)
-            # Cache the resized image
-            self.camera_cache[cache_key] = {
-                'image': resized_image,
-                'timestamp': current_time
-            }
-            return resized_image.copy()
+    def get_camera_image(self):
+        self.command_queue.put(('GetImageSample',))
+        try:
+            (code, data) = self.camera_queue.get(timeout=1.0)
+            if code == 0 and data is not None:
+                image_data = np.frombuffer(bytes(data), dtype=np.uint8)
+                image = cv2.imdecode(image_data, cv2.IMREAD_COLOR)
+                if image is not None:
+                    image = image[:,:,[2,1,0]]
+                    image = cv2.transpose(image)
+                return image
+        except Empty:
+            pass
+        except Exception as e:
+            print(f"camera wrong: {e}")
         else:
-            return original_image.copy()
+            return None
 
     def get_to_coordination_goal(self, x, y):
         '''
