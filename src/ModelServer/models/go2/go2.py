@@ -4,6 +4,7 @@ from .gopro.gopro10 import init_gopro10
 # from .ahex_arm.ahex_arm_hardware import AhexArmHardware
 # from .ahex_arm.pid_controller import PIDController
 from .gripper.gripper_control import Gripper
+from ..hexmove.orbbec import OrbbecCamera
 import time
 import numpy as np
 import cv2
@@ -33,6 +34,8 @@ class Go2:
                 print("Gripper not initialized")
             self.gopro10 = init_gopro10(width=224, height=224)
             print("GoPro10 initialized")
+            self.orbbec_camera = OrbbecCamera('CP84B410000V')
+            print("OrbbecCamera initialized")
         elif ros_version == 'noetic':
             self._init_arm_control(arm_controller_type)
             pass
@@ -125,6 +128,21 @@ class Go2:
             # Don't crash the caller; log briefly and return None
             print(f"get_camera_image error: {e}")
             return None
+    
+    def get_orbbec_camera_rgb_image(self, zoom_factor=1.0):
+        """Get RGB image from Orbbec camera
+        
+        Args:
+            zoom_factor (float): Zoom factor for the image (default 1.0)
+        
+        Returns:
+            tuple: (color_image, timestamp) or (None, None) on failure
+        """
+        try:
+            return self.orbbec_camera.capture_rgb_image(zoom_factor)
+        except Exception as e:
+            print(f"get_orbbec_camera_rgb_image error: {e}")
+            return None, None
     
     def get_pc(self):
         pc = self.robot.get_pointcloud() 
